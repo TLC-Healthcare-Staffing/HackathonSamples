@@ -91,4 +91,33 @@ def get_bill(config, bill_id):
         return  r.status_code, r.json()
     except:
         print ("Unexpected error:", sys.exc_info()[0])
+
+        
+def query_invoices(config):
+    """
+        POST request to query Invoices in QBO
+        Refer here for other available Invoices fields and other QBO entities: https://developer.intuit.com/app/developer/qbo/docs/api/accounting/all-entities/invoice
+    """
+    
+    print("****  Read invoices  ****")
+    
+    query_statement = "select * from invoice where CustomerRef IN ('25','26')"
+    query_params = {'query': query_statement}
+    url = ''
+    url += config['qbo_base_url'] + '/v3/company/' + config['realm_id'] + '/query' + '?minorversion=65'
+    
+    print(url)
+    
+    headers = {
+                "Accept": "application/json",
+                "Authorization": "Bearer " + config['access_token']
+            }
+
+    try: 
+        r = requests.post(url, headers=headers, params=query_params)
+        print (r)
+        print (r.content)
+        return  r.status_code, r.json()
+    except:
+        print ("Unexpected error:", sys.exc_info()[0])
     

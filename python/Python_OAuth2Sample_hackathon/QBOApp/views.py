@@ -6,7 +6,7 @@ import json
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.template import Context, Template
-from .QBO_requests import create_bill, get_bill
+from .QBO_requests import create_bill, get_bill, query_invoices
 from .helper import OAuth2_helper
 
 # Create your views here.
@@ -50,9 +50,31 @@ def index(request):
 
         # Make API requests with fresh acces token        
         get_bill_status, get_bill_response = get_bill(config, create_bill_response["Bill"]["Id"])
+        
+        
+    get_invoice_status, get_invoice_response = query_invoices(config)
+    
+    # If HTTP status code 401 is returned by the API, getting a fresh access token is required since access tokens are valid only for 60 min.
+    if get_invoice_status == 401:
+        fresh_tokens = OAuth2_helper.refresh_access_token(config)
+        if fresh_tokens:
+            update_session(request, fresh_tokens['access_tokens'], fresh_tokens['refresh_tokens'])
+        else:
+            return HttpResponse('Could not refresh access token.')
+
+        # Update config with the right tokens
+        config['access_token'] = request.session['access_token']
+        config['refresh_token'] = request.session['refresh_token']
+
+        # Make API requests with fresh acces token        
+        get_invoice_status, get_invoice_response = query_invoices(config)
+        
+        
+    # Render index.html    
     context = {
             'post_request': create_bill_response,
             'get_request': get_bill_response,
+            'invoice_response': get_invoice_response,
         }
     return render(request, 'index.html', context=context)
 
